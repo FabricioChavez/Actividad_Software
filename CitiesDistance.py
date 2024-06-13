@@ -1,4 +1,6 @@
 from math import radians, sin, cos, sqrt, atan2
+import csv
+import requests
 
 
 def haversine(lat1, lon1, lat2, lon2):
@@ -36,9 +38,36 @@ class ServicioCoordenadas:
         pass
 
 
+class CSVServicioCoordenadas(ServicioCoordenadas):
+    def __init__(self, csv_file):
+        self.csv_file = csv_file
+
+    def obtener_coordenadas(self, ciudad):
+        with open(self.csv_file, mode='r', encoding='utf-8') as file:
+            reader = csv.DictReader(file)
+            for row in reader:
+                if row['city'].capitalize() == ciudad.nombreCiudad and row['country'].capitalize() == ciudad.nombrePais:
+                    return Coordenada(float(row['lat']), float(row['lng'])).get_coordinates()
+        return None
 
 
-
+class API_ServicioCoordenadas(ServicioCoordenadas):
+    def obtener_coordenadas(self, ciudad):
+        url = f"https://nominatim.openstreetmap.org/search?q={ciudad.nombreCiudad},{ciudad.nombrePais}&format=json"
+        response = requests.get(url)
+        
+        if response.status_code != 200:
+            print(f"Error: No se pueden obtener datos de la API para {ciudad}. Código de estado: {response.status_code}")
+            return None
+        
+        try:
+            data = response.json()
+            if data:
+                return Coordenada(float(data[0]['lat']), float(data[0]['lon'])).get_coordinates()
+        except ValueError as e:
+            print(f"Error: No se pudo analizar la respuesta JSON para {ciudad}. {e}")
+        
+        return None
 
 
 class MockServicioCoordenadas(ServicioCoordenadas):
